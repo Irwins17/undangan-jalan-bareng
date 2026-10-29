@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Undangan Jalan Bareng</title>
+<meta name="description" content="Undangan kencan interaktif — buka amplop, pilih rencana, lalu kirim tiketnya lewat WhatsApp.">
+<meta name="theme-color" content="#f6ece6">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💌</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&family=Nunito:wght@400;500;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+/* Layout: one phone-width "stage" holding a single screen at a time; screens cross-fade over an ambient blush backdrop with drifting petals. Single committed warm-blush theme. */
+:root{
+  --cream:#f6ece6; --cream-2:#fbf4ef; --card:#fcf6f2;
+  --blush:#f2dcd8; --blush-2:#eccfd0;
+  --rose:#c98b9b; --wine:#8f3d57; --wine-deep:#6e2d44;
+  --ink:#5b4248; --ink-soft:#7a6066; --muted:#a98b8f; --line:#e7d2cd;
+  --wa:#25a06a; --wa-deep:#1c7d52;
+  --font-script:'Caveat','Segoe Script',cursive;
+  --font-serif:'Playfair Display','Iowan Old Style',serif;
+  --font-body:'Nunito','Segoe UI',system-ui,sans-serif;
+  --shadow:0 18px 40px -22px rgba(110,45,68,.45);
+  --shadow-lg:0 30px 70px -30px rgba(110,45,68,.55);
+  color-scheme:light;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:
+    radial-gradient(130% 90% at 50% -10%, #fdf6f2 0%, var(--cream) 55%, #efe0da 100%);
+  color:var(--ink);font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;overflow:hidden;
+}
+#petals{position:fixed;inset:0;z-index:0;pointer-events:none}
+.stage{
+  position:relative;z-index:1;height:100%;width:100%;
+  display:flex;align-items:center;justify-content:center;
+  padding:22px max(16px,env(safe-area-inset-left,0px)) 22px max(16px,env(safe-area-inset-right,0px));
+}
+.screen{
+  position:absolute;width:100%;max-width:440px;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  opacity:0;transform:translateY(14px) scale(.985);
+  pointer-events:none;transition:opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1);
+  max-height:100%;overflow-y:auto;overflow-x:hidden;padding:4px 4px 12px;
+  scrollbar-width:none;
+}
+.screen>*{flex:0 0 auto}        /* jangan biarkan kartu menyusut saat isi panjang */
+.screen::-webkit-scrollbar{display:none}
+.screen.active{opacity:1;transform:none;pointer-events:auto}
+
+/* ---------- shared bits ---------- */
+.eyebrow{font-family:var(--font-body);font-size:.68rem;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--rose);font-weight:700;text-align:center}
+.script{font-family:var(--font-script);color:var(--wine);line-height:1.02;text-wrap:balance;text-align:center}
+.card{
+  background:linear-gradient(180deg,var(--card),#f7ede8);
+  border:1px solid rgba(255,255,255,.7);border-radius:26px;
+  box-shadow:var(--shadow-lg);padding:30px 26px;width:100%;
+  position:relative;overflow:hidden;
+}
+.card::after{content:"";position:absolute;inset:0;border-radius:26px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8), inset 0 -40px 60px -40px rgba(201,139,155,.25);pointer-events:none}
+.btn{
+  font-family:var(--font-body);font-weight:800;font-size:1rem;cursor:pointer;
+  border:none;border-radius:999px;padding:14px 30px;color:#fff;text-decoration:none;
+  display:inline-flex;align-items:center;justify-content:center;text-align:center;
+  background:linear-gradient(180deg,var(--wine),var(--wine-deep));
+  box-shadow:0 12px 24px -12px rgba(110,45,68,.8), inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .15s ease, box-shadow .15s ease;letter-spacing:.01em;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 18px 30px -14px rgba(110,45,68,.85)}
+.btn:active{transform:translateY(0)}
+.btn.ghost{background:transparent;color:var(--wine);box-shadow:none;font-weight:700;
+  text-decoration:underline;text-underline-offset:4px;padding:8px 14px;font-size:.92rem}
+.btn.soft{background:var(--blush);color:var(--wine-deep);box-shadow:none;border:1px solid var(--line)}
+.btn.wa{background:linear-gradient(180deg,var(--wa),var(--wa-deep));
+  box-shadow:0 12px 24px -12px rgba(28,125,82,.7), inset 0 1px 0 rgba(255,255,255,.25)}
+.btn.wa:hover{box-shadow:0 18px 30px -14px rgba(28,125,82,.8)}
+.sub{color:var(--ink-soft);text-align:center;font-size:.95rem;line-height:1.5}
+.brand{font-family:var(--font-script);font-size:1.3rem;color:var(--rose);text-align:center}
+
+/* ---------- setup ---------- */
+#setup .card{padding:30px 24px}
+.setup-field{width:100%;margin-top:16px;text-align:left}
+.setup-field label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--rose);font-weight:800;display:block;margin:0 4px 6px}
+.hint-mini{color:var(--muted);font-size:.78rem;margin:6px 4px 0;line-height:1.4}
+
+/* ---------- intro / envelope ---------- */
+#intro{align-items:center;gap:0}
+.intro-top{display:flex;flex-direction:column;align-items:center;gap:7px;margin-bottom:26px}
+.ribbon{font-family:var(--font-script);font-size:1.5rem;color:#fff;background:linear-gradient(180deg,var(--rose),#b06f80);
+  padding:3px 26px;border-radius:6px;box-shadow:0 10px 20px -12px rgba(110,45,68,.7);position:relative}
+.ribbon::before,.ribbon::after{content:"";position:absolute;top:0;bottom:0;width:12px;background:#9a5e6f}
+.ribbon::before{left:-11px;clip-path:polygon(0 0,100% 20%,100% 80%,0 100%,40% 50%)}
+.ribbon::after{right:-11px;clip-path:polygon(100% 0,0 20%,0 80%,100% 100%,60% 50%)}
+.envelope{position:relative;width:260px;height:180px;cursor:pointer;margin:6px auto 4px;
+  filter:drop-shadow(0 26px 30px rgba(110,45,68,.35));transition:transform .5s ease}
+.envelope:hover{transform:translateY(-6px) rotate(-.6deg)}
+.env-body{position:absolute;inset:0;border-radius:16px;
+  background:linear-gradient(155deg,#fbeee9,#f0d7d2);border:1px solid rgba(255,255,255,.7)}
+.env-pocket{position:absolute;left:0;right:0;bottom:0;height:118px;border-radius:0 0 16px 16px;
+  background:linear-gradient(160deg,#f6e2dd,#eccfca);
+  clip-path:polygon(0 100%,0 18%,50% 72%,100% 18%,100% 100%)}
+.env-flap{position:absolute;left:0;right:0;top:0;height:112px;transform-origin:top;z-index:3;
+  background:linear-gradient(160deg,#f3dcd7,#e3bdc0);
+  clip-path:polygon(0 0,100% 0,50% 86%);transition:transform .7s cubic-bezier(.6,0,.2,1)}
+.seal{position:absolute;top:58px;left:50%;transform:translateX(-50%);z-index:4;
+  width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:1.3rem;
+  background:radial-gradient(circle at 35% 30%,#b8546c,var(--wine-deep));color:#ffe;
+  box-shadow:0 8px 16px -6px rgba(110,45,68,.8), inset 0 2px 4px rgba(255,255,255,.3);transition:opacity .4s}
+.letter{position:absolute;left:12px;right:12px;top:16px;height:120px;background:#fffdfb;border-radius:10px;z-index:2;
+  box-shadow:0 6px 14px -8px rgba(110,45,68,.4);transform:translateY(0);transition:transform .7s ease .15s;
+  display:flex;align-items:center;justify-content:center;font-family:var(--font-script);color:var(--rose);font-size:1.3rem}
+.envelope.open .env-flap{transform:rotateX(178deg)}
+.envelope.open .seal{opacity:0}
+.envelope.open .letter{transform:translateY(-54px)}
+.tap-hint{margin-top:20px;font-family:var(--font-body);color:var(--muted);font-size:.9rem;
+  display:flex;align-items:center;gap:8px;animation:bob 2.2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(5px)}}
+
+/* ---------- ask ---------- */
+.basket{font-size:2.6rem;text-align:center;filter:drop-shadow(0 10px 14px rgba(110,45,68,.25))}
+.ask-q{font-size:2.9rem;margin:10px 0 6px}
+.ask-row{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:22px}
+#yesBtn{font-size:1.1rem;transition:transform .25s ease, font-size .25s ease, padding .25s ease}
+#noBtn{position:relative;transition:transform .18s ease}
+
+/* ---------- forms ---------- */
+.field{width:100%;margin-top:16px}
+input[type=date],input[type=time],input[type=tel],input.txt,textarea{
+  width:100%;font-family:var(--font-body);font-size:1rem;color:var(--ink);
+  background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:13px 15px;outline:none;
+  transition:border-color .2s, box-shadow .2s;}
+textarea{min-height:92px;resize:vertical;line-height:1.5}
+input:focus,textarea:focus{border-color:var(--rose);box-shadow:0 0 0 4px rgba(201,139,155,.18)}
+.chips{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:14px}
+.chip{font-family:var(--font-body);font-weight:600;font-size:.92rem;cursor:pointer;
+  background:#fff;border:1.5px solid var(--line);color:var(--ink-soft);
+  border-radius:999px;padding:9px 16px;transition:all .18s ease;user-select:none}
+.chip:hover{border-color:var(--rose)}
+.chip.on{background:linear-gradient(180deg,var(--rose),#b06f80);color:#fff;border-color:transparent;
+  box-shadow:0 8px 16px -8px rgba(110,45,68,.6)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.tile{cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:12px 6px 10px;
+  transition:all .18s ease}
+.tile:hover{transform:translateY(-3px);border-color:var(--rose)}
+.tile.on{background:linear-gradient(180deg,#fbe7ea,#f6d7dc);border-color:var(--rose);
+  box-shadow:0 10px 18px -10px rgba(110,45,68,.5)}
+.tile .ic{font-size:1.5rem}
+.tile .lb{font-size:.68rem;font-weight:700;color:var(--ink-soft);text-align:center;line-height:1.15}
+.tile.on .lb{color:var(--wine-deep)}
+.form-head{margin-bottom:4px}
+.actions{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:22px}
+
+/* ---------- ticket ---------- */
+#ticketCard{background:
+   linear-gradient(180deg,#fcf6f2,#f6e7e1);
+   border-radius:22px;padding:26px 24px 22px;position:relative;width:100%;
+   box-shadow:var(--shadow-lg);overflow:hidden;border:1px solid rgba(255,255,255,.8)}
+#ticketCard::before{content:"";position:absolute;left:-14px;top:0;bottom:0;width:28px;
+   background:radial-gradient(circle,transparent 60%,#efe0da 61%) 0 0/28px 22px repeat-y}
+#ticketCard::after{content:"";position:absolute;right:-14px;top:0;bottom:0;width:28px;
+   background:radial-gradient(circle,transparent 60%,#efe0da 61%) 0 0/28px 22px repeat-y}
+.tk-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.tk-admit{font-size:.62rem;letter-spacing:.3em;text-transform:uppercase;color:var(--rose);font-weight:800}
+.tk-title{font-family:var(--font-serif);font-style:italic;font-weight:600;font-size:1.7rem;color:var(--wine-deep);line-height:1.1;margin-top:2px}
+.tk-stamp{flex:none;width:52px;height:52px;border-radius:50%;border:2px dashed var(--rose);
+  display:grid;place-items:center;font-size:1.3rem;color:var(--wine);transform:rotate(8deg);background:#fff6f4}
+.tk-rows{margin-top:18px;display:flex;flex-direction:column;gap:13px}
+.tk-row{display:flex;align-items:flex-start;gap:12px}
+.tk-ic{flex:none;width:34px;height:34px;border-radius:50%;background:#f4dadf;display:grid;place-items:center;font-size:.95rem;color:var(--wine)}
+.tk-k{font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.tk-v{font-family:var(--font-script);font-size:1.35rem;color:var(--ink);line-height:1.05;margin-top:1px;word-break:break-word}
+.tk-divide{border:none;border-top:1.5px dashed var(--line);margin:18px 0 14px}
+.tk-note{font-family:var(--font-script);font-size:1.3rem;color:var(--ink-soft);text-align:center;line-height:1.15}
+.tk-from{font-family:var(--font-body);font-weight:700;color:var(--rose);text-align:center;margin-top:12px;font-size:.95rem}
+.send-hint{color:var(--ink-soft);text-align:center;font-size:.85rem;margin:16px 4px 2px;line-height:1.45}
+
+/* ---------- bouquet ---------- */
+.bouquet{font-size:5rem;text-align:center;line-height:1;filter:drop-shadow(0 18px 24px rgba(110,45,68,.35));
+  animation:sway 5s ease-in-out infinite;transform-origin:bottom center}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.meanings{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.meaning{background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:.78rem;color:var(--ink-soft)}
+.meaning b{color:var(--wine-deep)}
+
+/* ---------- image modal ---------- */
+.modal{position:fixed;inset:0;z-index:30;background:rgba(72,40,50,.72);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;padding:24px;overflow:auto}
+.modal.show{display:flex}
+.modal-inner{background:var(--cream-2);border-radius:22px;padding:18px;max-width:380px;width:100%;box-shadow:var(--shadow-lg);text-align:center}
+.modal-inner img{border-radius:14px;width:100%;box-shadow:var(--shadow)}
+.modal-inner p{color:var(--ink-soft);font-size:.9rem;margin:14px 2px 10px;line-height:1.45}
+
+@media (max-width:360px){.grid{grid-template-columns:repeat(3,1fr)}.ask-q{font-size:2.4rem}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:opacity .25s ease!important}}
+</style>
+</head>
+<body>
+
+<canvas id="petals"></canvas>
+<div class="stage" id="stage">
+
+  <!-- 0. SETUP -->
+  <section class="screen active" id="setup">
+    <div class="card">
+      <div class="eyebrow">Bikin undangan</div>
+      <h1 class="script" style="font-size:2.5rem;margin:8px 0 2px">isi dulu yuk ✍️</h1>
+      <p class="sub" style="margin-bottom:6px">biar undangannya jadi punya kamu</p>
+
+      <div class="setup-field">
+        <label>Buat siapa?</label>
+        <input class="txt" id="setRecipient" placeholder="nama yang kamu undang" autocomplete="off">
+      </div>
+      <div class="setup-field">
+        <label>Dari siapa?</label>
+        <input class="txt" id="setSender" placeholder="nama kamu" autocomplete="off">
+      </div>
+      <div class="setup-field">
+        <label>Nomor WhatsApp kamu</label>
+        <input type="tel" id="setPhone" placeholder="08123456789" inputmode="numeric" autocomplete="off">
+        <p class="hint-mini">Pas dia pencet “Kirim ke WhatsApp”, balasannya langsung masuk ke nomor ini.</p>
+      </div>
+
+      <div class="actions"><button class="btn" id="startBtn">Mulai bikin undangan ✨</button></div>
+      <p class="hint-mini" style="text-align:center;margin-top:12px">Setelah ini, salin & bagikan link di browser — pas dia buka, langsung masuk ke amplop tanpa lihat isian ini.</p>
+    </div>
+  </section>
+
+  <!-- 1. INTRO -->
+  <section class="screen" id="intro">
+    <div class="intro-top">
+      <div class="eyebrow">Undangan Pribadi</div>
+      <div class="ribbon" id="introRibbon">buat kamu</div>
+    </div>
+    <div class="envelope" id="envelope" role="button" tabindex="0" aria-label="Buka amplop">
+      <div class="env-body"></div>
+      <div class="letter" id="letterPeek">♡</div>
+      <div class="env-pocket"></div>
+      <div class="env-flap"></div>
+      <div class="seal">♥</div>
+    </div>
+    <p class="sub" id="introSub" style="margin-top:22px;max-width:300px">aku ada satu pertanyaan nih…</p>
+    <div class="tap-hint">👆 ketuk amplopnya buat buka</div>
+  </section>
+
+  <!-- 2. ASK -->
+  <section class="screen" id="ask">
+    <div class="card">
+      <div class="basket">🧺🌸</div>
+      <div class="brand" id="askBrand">buat kamu</div>
+      <h1 class="script ask-q" id="askQ">weekend ini mau jalan bareng aku gak?</h1>
+      <p class="sub">udah sini, pencet iya aja 🤭</p>
+      <div class="ask-row">
+        <button class="btn" id="yesBtn">mauuu, ayok 💗</button>
+        <button class="btn soft" id="noBtn">hmm, gak dulu</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. DATE -->
+  <section class="screen" id="date">
+    <div class="card">
+      <div class="eyebrow form-head">rencana kita</div>
+      <h2 class="script" style="font-size:2.4rem;margin:6px 0 4px">kamu kosongnya kapan nih?</h2>
+      <div class="field"><input type="date" id="inDate"></div>
+      <div class="chips" id="daypart">
+        <span class="chip" data-v="Pagi">Pagi</span>
+        <span class="chip" data-v="Siang">Siang</span>
+        <span class="chip" data-v="Sore">Sore</span>
+        <span class="chip" data-v="Malam">Malam</span>
+      </div>
+      <div class="field"><input type="time" id="inTime" value="15:30"></div>
+      <div class="actions"><button class="btn" data-next="activity">Lanjut</button></div>
+    </div>
+  </section>
+
+  <!-- 4. ACTIVITY -->
+  <section class="screen" id="activity">
+    <div class="card">
+      <div class="eyebrow form-head">terus…</div>
+      <h2 class="script" style="font-size:2.4rem;margin:6px 0 2px">terus kita enaknya ngapain?</h2>
+      <p class="sub" style="margin-top:2px;font-size:.82rem">boleh pilih lebih dari satu, atau semuanya ✓</p>
+      <div class="grid" id="actGrid"></div>
+      <div class="field"><input class="txt" id="actCustom" placeholder="atau tulis ide kamu…"></div>
+      <div class="actions"><button class="btn" data-next="dress">Oke</button></div>
+    </div>
+  </section>
+
+  <!-- 5. DRESS -->
+  <section class="screen" id="dress">
+    <div class="card">
+      <div class="eyebrow form-head">biar makin niat</div>
+      <h2 class="script" style="font-size:2.6rem;margin:6px 0 2px">Dress code-nya?</h2>
+      <div class="chips" id="dressChips">
+        <span class="chip" data-v="Santai aja">Santai aja</span>
+        <span class="chip" data-v="Cutesy / imut">Cutesy / imut</span>
+        <span class="chip" data-v="Rapi / formal">Rapi / formal</span>
+        <span class="chip" data-v="Couple-an">Couple-an</span>
+        <span class="chip" data-v="Satu warna">Satu warna</span>
+      </div>
+      <div class="field"><input class="txt" id="dressCustom" placeholder="atau tulis sendiri…"></div>
+      <div class="actions"><button class="btn" data-next="message">Lanjut</button></div>
+    </div>
+  </section>
+
+  <!-- 6. MESSAGE -->
+  <section class="screen" id="message">
+    <div class="card">
+      <div class="eyebrow form-head">terakhir</div>
+      <h2 class="script" id="msgTitle" style="font-size:2.6rem;margin:6px 0 2px">Ada pesan buat aku?</h2>
+      <div class="field"><textarea id="inMsg" placeholder="opsional, boleh kosong…"></textarea></div>
+      <div class="actions"><button class="btn" id="makeTicket">Bikin tiketnya</button></div>
+    </div>
+  </section>
+
+  <!-- 7. TICKET -->
+  <section class="screen" id="ticket">
+    <div id="ticketCard">
+      <div class="tk-head">
+        <div>
+          <div class="tk-admit">Jalan Kegiatan</div>
+          <div class="tk-title" id="tkTitle">Jalan Bareng kamu</div>
+        </div>
+        <div class="tk-stamp">♥</div>
+      </div>
+      <div class="tk-rows">
+        <div class="tk-row"><div class="tk-ic">♥</div><div><div class="tk-k">Untuk</div><div class="tk-v" id="tkTo">kamu</div></div></div>
+        <div class="tk-row"><div class="tk-ic">🗓️</div><div><div class="tk-k">Kapan</div><div class="tk-v" id="tkWhen">—</div></div></div>
+        <div class="tk-row"><div class="tk-ic">🍿</div><div><div class="tk-k">Acara</div><div class="tk-v" id="tkAct">—</div></div></div>
+        <div class="tk-row"><div class="tk-ic">👗</div><div><div class="tk-k">Dress code</div><div class="tk-v" id="tkDress">—</div></div></div>
+        <div class="tk-row"><div class="tk-ic">💌</div><div><div class="tk-k">Pesan</div><div class="tk-v" id="tkMsg">—</div></div></div>
+      </div>
+      <hr class="tk-divide">
+      <p class="tk-note" id="tkNote">oke fix yaa, aku tunggu rencana pilihan kamu. gak boleh kabur wkwk</p>
+      <p class="tk-from" id="tkFrom">dari aku, buat kamu 💌</p>
+    </div>
+    <p class="send-hint" id="sendHint">Pencet kirim — chat WhatsApp bakal kebuka otomatis sama isinya 💬</p>
+    <div class="actions" style="margin-top:6px;gap:10px">
+      <a class="btn wa" id="waBtn" target="_blank" rel="noopener">Kirim ke WhatsApp 💬</a>
+      <button class="btn soft" id="saveImg">Simpan jadi gambar 📸</button>
+      <button class="btn ghost restart">Ulang dari awal</button>
+    </div>
+  </section>
+
+  <!-- 8. BOUQUET -->
+  <section class="screen" id="bouquet">
+    <div class="bouquet">💐</div>
+    <div class="card" style="margin-top:18px;text-align:center">
+      <div class="eyebrow">Apresiasi</div>
+      <h2 class="script" id="bqTitle" style="font-size:2.3rem;margin:8px 0 4px">makasih yaa 🤍</h2>
+      <p class="sub">Terima kasih udah mau jalan bareng.</p>
+      <div class="meanings">
+        <span class="meaning"><b>Pink rose</b> · syukur</span>
+        <span class="meaning"><b>Blue hydrangea</b> · tulus</span>
+        <span class="meaning"><b>White daisy</b> · murni</span>
+      </div>
+      <div class="actions" style="margin-top:20px">
+        <button class="btn" data-next="ticket">Kembali ke tiket</button>
+        <button class="btn ghost restart">Ulang dari awal</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- image preview modal -->
+<div class="modal" id="imgModal">
+  <div class="modal-inner">
+    <img id="imgOut" alt="Tiket">
+    <p>Tahan gambarnya untuk simpan, atau screenshot lalu kirim ke doi 💌</p>
+    <button class="btn soft" id="closeModal">Tutup</button>
+  </div>
+</div>
+
+<script>
+/* ===================== teks default (boleh diubah) ===================== */
+const CONFIG = {
+  question: "weekend ini mau jalan bareng aku gak?",
+  note:     "oke fix yaa, aku tunggu rencana pilihan kamu. gak boleh kabur wkwk"
+};
+/* ====================================================================== */
+
+const state = { recipient:"", sender:"", phone:"", date:"", daypart:"", time:"15:30", activities:[], actCustom:"", dress:"", msg:"" };
+let isGuest=false;  // true kalau link dibuka lewat undangan jadi (hash terisi)
+
+/* ---- encode/decode setup ke dalam link (hex, aman buat hash) ---- */
+function encodeSetup(o){
+  const bytes=new TextEncoder().encode(JSON.stringify(o));
+  return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function decodeSetup(hex){
+  const bytes=new Uint8Array(hex.match(/.{1,2}/g).map(h=>parseInt(h,16)));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+/* ---------- restore last setup (per browser) ---------- */
+try{
+  const saved=JSON.parse(localStorage.getItem('undangan_setup')||'{}');
+  if(saved.recipient) setRecipient.value=saved.recipient;
+  if(saved.sender) setSender.value=saved.sender;
+  if(saved.phone) setPhone.value=saved.phone;
+}catch(e){}
+
+/* ---------- apply typed names everywhere ---------- */
+function applyNames(){
+  const R=state.recipient||"kamu", S=state.sender||"aku";
+  introRibbon.textContent="buat "+R;
+  askBrand.textContent="buat "+R;
+  askQ.textContent=CONFIG.question;
+  msgTitle.textContent="Ada pesan buat "+S+"?";
+  tkTitle.textContent="Jalan Bareng "+R;
+  tkTo.textContent=R;
+  tkNote.textContent=CONFIG.note;
+  tkFrom.textContent="dari "+S+", buat "+R+" 💌";
+  bqTitle.textContent="makasih yaa, "+R+" 🤍";
+}
+
+/* ---------- start ---------- */
+document.getElementById('startBtn').addEventListener('click',()=>{
+  const r=setRecipient.value.trim(), s=setSender.value.trim();
+  if(!r){ setRecipient.focus(); setRecipient.style.borderColor='var(--wine)'; return; }
+  if(!s){ setSender.focus(); setSender.style.borderColor='var(--wine)'; return; }
+  state.recipient=r; state.sender=s; state.phone=setPhone.value.trim();
+  try{ localStorage.setItem('undangan_setup',JSON.stringify({recipient:r,sender:s,phone:state.phone})); }catch(e){}
+  applyNames();
+  // simpan ke link -> pas di-share, orang lain langsung masuk ke amplop
+  try{ location.hash=encodeSetup({r:state.recipient,s:state.sender,p:state.phone}); }catch(e){}
+  go('intro');
+});
+[setRecipient,setSender].forEach(i=>i.addEventListener('input',()=>i.style.borderColor=''));
+
+/* ---------- screen navigation ---------- */
+const screens = [...document.querySelectorAll('.screen')];
+function go(id){
+  screens.forEach(s=>s.classList.toggle('active', s.id===id));
+  const sc = document.getElementById(id); if(sc) sc.scrollTop = 0;
+  if(id==='setup') resetFlow();
+}
+document.querySelectorAll('[data-next]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.next)));
+
+/* ---------- intro envelope ---------- */
+const env = document.getElementById('envelope');
+function openEnv(){ env.classList.add('open'); setTimeout(()=>go('ask'),760); }
+env.addEventListener('click',openEnv);
+env.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();openEnv();} });
+
+/* ---------- ASK : yes grows, no runs away ---------- */
+const yesBtn=document.getElementById('yesBtn'), noBtn=document.getElementById('noBtn');
+const noTexts=["hmm, gak dulu","yakin nih?","jahat banget 😭","coba tangkep dulu","gabisa diklik tau","beneran nih??","yaudah iya aja 🥹"];
+let dodge=0, yScale=1;
+yesBtn.addEventListener('click',()=>{ go('date'); ensureDefaults(); });
+function runAway(e){
+  if(e) e.preventDefault();
+  dodge++;
+  const card=noBtn.closest('.card').getBoundingClientRect();
+  const w=noBtn.offsetWidth, h=noBtn.offsetHeight;
+  const maxX=Math.max(40, card.width-w-30), maxY=Math.max(60, card.height-h-30);
+  const x=(Math.random()*maxX)-maxX/2, y=(Math.random()*maxY)-maxY/2;
+  noBtn.style.transform=`translate(${x}px, ${y}px)`;
+  noBtn.textContent=noTexts[Math.min(dodge,noTexts.length-1)];
+  yScale=Math.min(1.5, 1+dodge*0.08);
+  yesBtn.style.fontSize=(1.1*yScale)+"rem";
+  yesBtn.style.padding=`${14*yScale}px ${30*yScale}px`;
+}
+noBtn.addEventListener('pointerenter',runAway);
+noBtn.addEventListener('pointerdown',runAway);
+
+/* ---------- chips (single select) ---------- */
+function singleSelect(container,onPick){
+  container.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    const was=c.classList.contains('on');
+    container.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    if(!was){c.classList.add('on');onPick(c.dataset.v);} else onPick("");
+  }));
+}
+singleSelect(document.getElementById('daypart'), v=>state.daypart=v);
+singleSelect(document.getElementById('dressChips'), v=>{ state.dress=v; if(v) dressCustom.value=""; });
+
+/* ---------- activity grid (multi select) ---------- */
+const ACTS=[["🍜","Makan bareng"],["☕","Ngopi cantik"],["🍿","Nonton"],["🌇","Jalan sore"],
+  ["🧺","Piknik"],["🎮","Main / seru-seruan"],["🛍️","Belanja"],["🛋️","Mager di rumah"]];
+const actGrid=document.getElementById('actGrid');
+ACTS.forEach(([ic,lb])=>{
+  const t=document.createElement('div');t.className='tile';t.dataset.lb=lb;
+  t.innerHTML=`<span class="ic">${ic}</span><span class="lb">${lb}</span>`;
+  t.addEventListener('click',()=>{
+    t.classList.toggle('on');               // bisa pilih lebih dari satu / semua
+    state.activities=[...actGrid.querySelectorAll('.tile.on')].map(x=>x.dataset.lb);
+  });
+  actGrid.appendChild(t);
+});
+
+/* ---------- inputs ---------- */
+const inDate=document.getElementById('inDate'), inTime=document.getElementById('inTime');
+const actCustom=document.getElementById('actCustom'), dressCustom=document.getElementById('dressCustom'), inMsg=document.getElementById('inMsg');
+inDate.addEventListener('change',e=>state.date=e.target.value);
+inTime.addEventListener('change',e=>state.time=e.target.value);
+actCustom.addEventListener('input',e=>state.actCustom=e.target.value);
+dressCustom.addEventListener('input',e=>{ if(e.target.value){state.dress=e.target.value;dressChips.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));}});
+inMsg.addEventListener('input',e=>state.msg=e.target.value);
+
+function ensureDefaults(){
+  if(!inDate.value){ const d=new Date(); d.setDate(d.getDate()+ ((6-d.getDay()+7)%7 || 7)); inDate.value=d.toISOString().slice(0,10); state.date=inDate.value; }
+  if(!state.time) state.time=inTime.value;
+}
+
+/* ---------- build ticket + WhatsApp link ---------- */
+function fmtDate(iso){
+  if(!iso) return "kapan aja kamu mau";
+  try{ return new Intl.DateTimeFormat('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(iso+'T00:00')); }
+  catch(e){ return iso; }
+}
+function waNumber(raw){
+  let d=(raw||"").replace(/\D/g,'');
+  if(!d) return "";
+  if(d.startsWith('0')) d='62'+d.slice(1);
+  else if(d.startsWith('8')) d='62'+d;
+  return d;
+}
+document.getElementById('makeTicket').addEventListener('click',()=>{
+  const when=[fmtDate(state.date), state.daypart, (state.time||"")].filter(Boolean).join(" · ");
+  const chosen=[...state.activities];
+  if(state.actCustom && state.actCustom.trim()) chosen.push(state.actCustom.trim());
+  const act = chosen.length ? chosen.join(", ") : "ngapain aja asal sama kamu";
+  const dress = state.dress || "bebas, yang penting pede";
+  const msg = (state.msg && state.msg.trim()) ? state.msg.trim() : "jangan telat ya! 🤭";
+  tkWhen.textContent=when||"menyusul ✨"; tkAct.textContent=act; tkDress.textContent=dress; tkMsg.textContent=msg;
+
+  // WhatsApp message (recipient -> sender)
+  const R=state.recipient||"kamu", S=state.sender||"aku";
+  const lines=[
+    `Halo ${S}! 💌`,
+    `Aku mau jalan bareng kamu~`,
+    ``,
+    `🎟️ Jalan Bareng ${R}`,
+    `• Untuk: ${R}`,
+    `• Kapan: ${when||"menyusul"}`,
+    `• Acara: ${act}`,
+    `• Dress code: ${dress}`,
+    `• Pesan: ${msg}`,
+    ``,
+    `— dari ${R} 🤍`
+  ];
+  const num=waNumber(state.phone);
+  const txt=encodeURIComponent(lines.join("\n"));
+  waBtn.href = num ? `https://wa.me/${num}?text=${txt}` : `https://wa.me/?text=${txt}`;
+  sendHint.textContent = num
+    ? `Pencet kirim — chat ke ${S} langsung kebuka sama isinya 💬`
+    : `Nomornya belum diisi, jadi WhatsApp bakal minta pilih kontak dulu. 💬`;
+  go('ticket');
+});
+
+/* after opening WhatsApp, show the thank-you bouquet */
+waBtn.addEventListener('click',()=>{ setTimeout(()=>go('bouquet'),500); });
+
+/* ---------- save ticket as image (download langsung di web yang di-deploy) ---------- */
+const modal=document.getElementById('imgModal'), imgOut=document.getElementById('imgOut');
+document.getElementById('saveImg').addEventListener('click',async()=>{
+  const btn=document.getElementById('saveImg'); const old=btn.textContent; btn.textContent="menyiapkan…";
+  try{
+    const canvas=await html2canvas(document.getElementById('ticketCard'),{scale:2,backgroundColor:'#f6e7e1',useCORS:true});
+    const url=canvas.toDataURL('image/png');
+    imgOut.src=url;
+    // unduh otomatis
+    try{
+      const a=document.createElement('a');
+      a.href=url; a.download='tiket-'+((state.recipient||'undangan').replace(/\s+/g,'-').toLowerCase())+'.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      modal.querySelector('p').textContent="Gambar tiket sudah diunduh ✅ — atau tahan/klik kanan gambar di bawah buat simpan ulang 💌";
+    }catch(err){
+      modal.querySelector('p').textContent="Tahan gambarnya untuk simpan, atau screenshot lalu kirim ke doi 💌";
+    }
+    modal.classList.add('show');
+  }catch(e){ imgOut.removeAttribute('src'); modal.querySelector('p').textContent="Gagal bikin gambar otomatis — screenshot tiketnya aja ya 📸"; modal.classList.add('show'); }
+  btn.textContent=old;
+});
+document.getElementById('closeModal').addEventListener('click',()=>modal.classList.remove('show'));
+modal.addEventListener('click',e=>{ if(e.target===modal) modal.classList.remove('show'); });
+
+/* ---------- reset the answer flow (keep names) ---------- */
+function resetFlow(){
+  Object.assign(state,{date:"",daypart:"",time:"15:30",activities:[],actCustom:"",dress:"",msg:""});
+  env.classList.remove('open');
+  inDate.value="";inTime.value="15:30";actCustom.value="";dressCustom.value="";inMsg.value="";
+  document.querySelectorAll('.chip.on,.tile.on').forEach(x=>x.classList.remove('on'));
+  dodge=0;noBtn.style.transform="";noBtn.textContent=noTexts[0];yesBtn.style.fontSize="";yesBtn.style.padding="";
+  // refill saved names into setup inputs (buat si pembuat)
+  try{
+    const saved=JSON.parse(localStorage.getItem('undangan_setup')||'{}');
+    setRecipient.value=saved.recipient||"";setSender.value=saved.sender||"";setPhone.value=saved.phone||"";
+  }catch(e){}
+}
+
+/* "Ulang dari awal": tamu balik ke amplop (nama tetap), pembuat balik ke setup */
+function restart(){ resetFlow(); go(isGuest?'intro':'setup'); }
+document.querySelectorAll('.restart').forEach(b=>b.addEventListener('click',restart));
+
+/* kalau link sudah membawa data setup -> langsung ke amplop, skip isian */
+(function initFromHash(){
+  const h=(location.hash||"").replace(/^#/,'');
+  if(/^([0-9a-f]{2})+$/.test(h) && h.length>=6){
+    try{
+      const o=decodeSetup(h);
+      if(o && o.r){
+        state.recipient=o.r; state.sender=o.s||""; state.phone=o.p||"";
+        isGuest=true; applyNames(); go('intro'); return;
+      }
+    }catch(e){}
+  }
+})();
+
+/* ---------- ambient petals ---------- */
+(function(){
+  const c=document.getElementById('petals'), x=c.getContext('2d');
+  let W,H,ps=[];const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const cols=['#f0c6cd','#e7b3bd','#f4d9d5','#d99aa9'];
+  function size(){W=c.width=innerWidth;H=c.height=innerHeight;}
+  function mk(){return{x:Math.random()*W,y:Math.random()*-H,r:6+Math.random()*7,
+    s:.25+Math.random()*.55,sw:.6+Math.random()*1.2,a:Math.random()*6.28,
+    col:cols[(Math.random()*cols.length)|0],o:.35+Math.random()*.35};}
+  function init(){size();ps=Array.from({length: innerWidth<480?16:28},mk);}
+  function draw(){
+    x.clearRect(0,0,W,H);
+    for(const p of ps){
+      p.y+=p.s;p.a+=.01;p.x+=Math.sin(p.a)*p.sw;
+      if(p.y>H+20){Object.assign(p,mk(),{y:-20});}
+      x.save();x.translate(p.x,p.y);x.rotate(p.a);x.globalAlpha=p.o;x.fillStyle=p.col;
+      x.beginPath();x.ellipse(0,0,p.r,p.r*.55,0,0,6.28);x.fill();x.restore();
+    }
+    requestAnimationFrame(draw);
+  }
+  addEventListener('resize',init);init();
+  if(!reduce) draw(); else {
+    for(const p of ps){x.save();x.translate(p.x,Math.random()*H);x.globalAlpha=p.o;x.fillStyle=p.col;
+      x.beginPath();x.ellipse(0,0,p.r,p.r*.55,0,0,6.28);x.fill();x.restore();}
+  }
+})();
+</script>
+</body>
+</html>
